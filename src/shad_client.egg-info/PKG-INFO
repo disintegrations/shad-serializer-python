@@ -1,0 +1,162 @@
+Metadata-Version: 2.4
+Name: shad-client
+Version: 0.1.0
+Summary: Unofficial synchronous Python client for Shad Messenger
+Author: shad-client contributors
+License-Expression: MIT
+Keywords: shad,messenger,iranlms,client
+Classifier: Development Status :: 3 - Alpha
+Classifier: Intended Audience :: Developers
+Classifier: Operating System :: OS Independent
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.10
+Classifier: Programming Language :: Python :: 3.11
+Classifier: Programming Language :: Python :: 3.12
+Classifier: Programming Language :: Python :: 3.13
+Classifier: Programming Language :: Python :: 3.14
+Classifier: Typing :: Typed
+Requires-Python: >=3.10
+Description-Content-Type: text/markdown
+License-File: LICENSE
+Requires-Dist: cryptography>=42
+Requires-Dist: requests>=2.31
+Provides-Extra: dev
+Requires-Dist: build>=1.2; extra == "dev"
+Dynamic: license-file
+
+# shad-client
+
+Unofficial synchronous Python client for Shad Messenger's HTTP API.
+
+`shad-client` implements the encrypted request protocol used by the Shad web
+client. It supports login, signed API v6 requests, chats, messages, contacts,
+channels, file transfers, and direct calls to additional HTTP methods.
+
+> This project is unofficial and is not affiliated with, endorsed by, or
+> supported by Shad or IranLMS. The upstream protocol is undocumented and may
+> change without notice.
+
+## Status
+
+The client is experimental. The currently implemented methods are based on
+observed web-client behavior and local protocol tests.
+
+- Supported: authentication, chats, messages, contacts, users, channels,
+  folders, settings, multipart uploads, ranged downloads, and generic HTTP API
+  calls.
+- Not yet supported: WebSocket events, voice/video calls, live streams, and
+  complete coverage of every Shad feature.
+
+See [Feature Support](docs/feature-support.md) for details.
+
+## Requirements
+
+- Python 3.10 or newer
+- A Shad account
+
+## Installation
+
+Install from the repository:
+
+```bash
+python -m pip install .
+```
+
+For development:
+
+```bash
+python -m pip install -e ".[dev]"
+python -m unittest discover -s tests -v
+```
+
+## Login
+
+Phone numbers use the country code without a leading `+`, such as `98912...`.
+
+```python
+from getpass import getpass
+
+from shad_client import ShadClient
+
+client = ShadClient()
+phone = input("Phone number: ").strip()
+
+sent = client.send_code(phone)
+client.sign_in(phone, sent["phone_code_hash"], getpass("Code: "))
+client.register_device()
+client.save_state("shad-state.json")
+```
+
+`shad-state.json` contains an account auth token and RSA private key. Keep it
+private. Anyone with that file may be able to access the account.
+
+## Usage
+
+```python
+from shad_client import ShadClient
+
+with ShadClient.load_state("shad-state.json") as shad:
+    chats = shad.get_chats()
+    shad.send_message("u0...", "Hello from Python")
+    shad.send_file("u0...", "document.pdf")
+```
+
+Call a method that does not yet have a convenience wrapper:
+
+```python
+result = shad.call_data("getMySessions", {})
+```
+
+- `call()` returns the complete response envelope.
+- `call_data()` checks the response status and returns the `data` object.
+- `call_plain()` calls an unencrypted Shad service endpoint.
+
+See [API Reference](docs/api.md) and the [examples](examples/) directory.
+
+## Interactive Account and Chat Example
+
+Run the complete terminal example:
+
+```bash
+python examples/account_chat.py
+```
+
+It loads or creates `shad-state.json`, then lets you:
+
+- List contacts
+- Open a contact chat and view recent messages
+- Add a contact by phone number and immediately chat
+- Send text or files
+- Log out and remove the local session
+
+Inside a chat, normal input sends text. Available commands are `/refresh`,
+`/file PATH`, `/help`, and `/back`. Incoming messages require `/refresh`
+because WebSocket updates are not implemented.
+
+Use another state path with:
+
+```bash
+python examples/account_chat.py --state my-account-state.json
+```
+
+## Security
+
+Do not commit HAR files, auth tokens, private keys, session state, or captured
+requests. This repository ignores common capture and state filenames, but you
+remain responsible for protecting credentials.
+
+For vulnerability reporting, see [SECURITY.md](SECURITY.md).
+
+## Development
+
+```bash
+python -m pip install -e ".[dev]"
+python -m unittest discover -s tests -v
+python -m build
+```
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) before submitting changes.
+
+## License
+
+MIT. See [LICENSE](LICENSE).

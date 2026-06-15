@@ -1,0 +1,5 @@
+cryptography>=42
+requests>=2.31
+
+[dev]
+build>=1.2
